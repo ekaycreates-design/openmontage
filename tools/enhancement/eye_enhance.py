@@ -44,6 +44,94 @@ LEFT_IRIS = [468, 469, 470, 471, 472]
 RIGHT_IRIS = [473, 474, 475, 476, 477]
 
 
+# MediaPipe >= 0.10.30 removed the legacy ``mp.solutions`` API. The Tasks API
+# FaceLandmarker returns the same 478-point topology (468 mesh + 10 iris), so
+# the landmark indices below stay valid; only the loading/calling differs.
+_FACE_LANDMARKER_URL = (
+    "https://storage.googleapis.com/mediapipe-models/face_landmarker/"
+    "face_landmarker/float16/1/face_landmarker.task"
+)
+
+
+class _LandmarkList:
+    """Adapter exposing Tasks-API landmarks as ``.landmark`` like legacy FaceMesh."""
+
+    def __init__(self, landmarks: list) -> None:
+        self.landmark = landmarks
+
+
+def _face_landmarker_model_path() -> Path:
+    import os
+    import urllib.request
+
+    cache_dir = Path(
+        os.environ.get("OPENMONTAGE_MODEL_CACHE", Path.home() / ".cache" / "openmontage")
+    ) / "mediapipe"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    model_path = cache_dir / "face_landmarker.task"
+    if not model_path.exists():
+        tmp = model_path.with_suffix(".part")
+        urllib.request.urlretrieve(_FACE_LANDMARKER_URL, tmp)
+        tmp.replace(model_path)
+    return model_path
+
+
+class _open_face_mesh:
+    """Context manager yielding ``detect(rgb, timestamp_ms) -> landmarks | None``.
+
+    Uses legacy ``mp.solutions.face_mesh`` when present, otherwise the Tasks API.
+    """
+
+    def __init__(self, mp: Any) -> None:
+        self._mp = mp
+        self._impl = None
+
+    def __enter__(self):
+        mp = self._mp
+        if hasattr(mp, "solutions"):
+            self._impl = mp.solutions.face_mesh.FaceMesh(
+                static_image_mode=False,
+                max_num_faces=1,
+                refine_landmarks=True,  # Enables iris landmarks (468-477)
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5,
+            )
+
+            def detect(rgb, _timestamp_ms):
+                results = self._impl.process(rgb)
+                if results.multi_face_landmarks:
+                    return results.multi_face_landmarks[0]
+                return None
+
+            return detect
+
+        from mediapipe.tasks.python import BaseOptions
+        from mediapipe.tasks.python import vision
+
+        options = vision.FaceLandmarkerOptions(
+            base_options=BaseOptions(model_asset_path=str(_face_landmarker_model_path())),
+            running_mode=vision.RunningMode.VIDEO,
+            num_faces=1,
+            min_face_detection_confidence=0.5,
+            min_face_presence_confidence=0.5,
+            min_tracking_confidence=0.5,
+        )
+        self._impl = vision.FaceLandmarker.create_from_options(options)
+
+        def detect(rgb, timestamp_ms):
+            image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            result = self._impl.detect_for_video(image, timestamp_ms)
+            if result.face_landmarks:
+                return _LandmarkList(result.face_landmarks[0])
+            return None
+
+        return detect
+
+    def __exit__(self, *exc) -> None:
+        if self._impl is not None:
+            self._impl.close()
+
+
 class EyeEnhance(BaseTool):
     name = "eye_enhance"
     version = "0.1.0"
@@ -188,8 +276,6 @@ class EyeEnhance(BaseTool):
         codec_fourcc = inputs.get("codec", "libx264")
         crf = inputs.get("crf", 18)
 
-        mp_face_mesh = mp.solutions.face_mesh
-
         cap = cv2.VideoCapture(str(input_path))
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -205,13 +291,7 @@ class EyeEnhance(BaseTool):
         frames_processed = 0
         frames_enhanced = 0
 
-        with mp_face_mesh.FaceMesh(
-            static_image_mode=False,
-            max_num_faces=1,
-            refine_landmarks=True,  # Enables iris landmarks (468-477)
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5,
-        ) as face_mesh:
+        with _open_face_mesh(mp) as detect_landmarks:
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
@@ -219,10 +299,10 @@ class EyeEnhance(BaseTool):
 
                 frames_processed += 1
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = face_mesh.process(rgb)
+                timestamp_ms = int(round((frames_processed - 1) * 1000.0 / fps))
+                landmarks = detect_landmarks(rgb, timestamp_ms)
 
-                if results.multi_face_landmarks:
-                    landmarks = results.multi_face_landmarks[0]
+                if landmarks is not None:
                     frame = self._apply_eye_enhancements(
                         frame, landmarks, width, height,
                         operations, dark_intensity, brighten_intensity, sharpen_intensity,

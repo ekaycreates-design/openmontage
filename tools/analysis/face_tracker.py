@@ -116,10 +116,13 @@ class FaceTracker(BaseTool):
 
     def _has_mediapipe(self) -> bool:
         try:
-            import mediapipe  # noqa: F401
-            return True
+            import mediapipe
         except ImportError:
             return False
+        # MediaPipe >= 0.10.30 dropped the legacy ``solutions`` API this tool
+        # uses; report it as missing so the OpenCV fallback runs instead of
+        # crashing with AttributeError.
+        return hasattr(mediapipe, "solutions")
 
     def _has_opencv(self) -> bool:
         try:
