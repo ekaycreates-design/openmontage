@@ -115,7 +115,7 @@ export interface FounderReelProps {
   ring?: { start: number; end: number; cx: number; cy: number; rx: number; ry: number; rot: number };
   inserts: Insert[];
   archWipe: { start: number; dur: number };
-  endCard: { start: number; logo?: string; wordmark?: string; episode: string; question: string };
+  endCard: { start: number; logo?: string; wordmark?: string; episode: string; question: string; outline?: boolean };
 }
 
 // -------------------------------------------------------------- helpers ----
@@ -594,13 +594,13 @@ const EndCard: React.FC<{ e: FounderReelProps["endCard"]; brand: Brand; t: numbe
   return (
     <AbsoluteFill style={{ background: `radial-gradient(90% 60% at 50% 40%, #FAF6F0 0%, ${brand.cream} 55%, ${brand.creamDeep} 100%)` }}>
       <AbsoluteFill style={{ background: `radial-gradient(40% 25% at 50% 47%, rgba(223,227,197,${0.22 + 0.06 * glow}), rgba(223,227,197,0) 70%)` }} />
-      <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
+      {e.outline !== false && <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
         {(brand.shape ?? "arch") === "circle" ? (
           <circle cx={W / 2} cy={965} r={340} fill="none" stroke={brand.hairline} strokeWidth={1.6} strokeDasharray={2 * Math.PI * 340} strokeDashoffset={2 * Math.PI * 340 * (1 - outline)} transform={`rotate(-90 ${W / 2} 965)`} />
         ) : (
           <path d={`M ${(W - AW) / 2} ${top + AH} L ${(W - AW) / 2} ${top + AW / 2} A ${AW / 2} ${AW / 2} 0 0 1 ${(W + AW) / 2} ${top + AW / 2} L ${(W + AW) / 2} ${top + AH}`} fill="none" stroke={brand.hairline} strokeWidth={1.6} strokeDasharray={L} strokeDashoffset={L * (1 - outline)} />
         )}
-      </svg>
+      </svg>}
       {logo ? (
         <div style={{ position: "absolute", top: 850, left: 0, right: 0, display: "flex", justifyContent: "center", opacity: logoK, transform: `translateY(${(1 - logoK) * 30}px)`, filter: `blur(${(1 - logoK) * 6}px)` }}>
           <Img src={staticFile(logo)} style={{ width: 470 }} />
@@ -609,7 +609,7 @@ const EndCard: React.FC<{ e: FounderReelProps["endCard"]; brand: Brand; t: numbe
         <div style={{ position: "absolute", top: 820, left: 0, right: 0, textAlign: "center", fontFamily: SERIF, fontWeight: 500, fontSize: 176, letterSpacing: "0.12em", color: brand.ink, opacity: logoK }}>{e.wordmark}</div>
       )}
       <div style={{ position: "absolute", top: 1046, left: (W - 140) / 2, width: 140 * ramp(local, 0.55, 1.0, easeInOut), height: 1.6, background: brand.hairline }} />
-      <div style={{ position: "absolute", top: 1080, left: 0, right: 0, textAlign: "center", fontFamily: SANS, fontWeight: 500, fontSize: 25, letterSpacing: "0.4em", color: brand.taupe, opacity: ramp(local, 0.6, 1.0) }}>{e.episode}</div>
+      <div style={{ position: "absolute", top: 1080, left: 0, right: 0, textAlign: "center", fontFamily: SANS, fontWeight: 500, fontSize: 25, letterSpacing: "0.4em", paddingLeft: "0.4em", color: brand.taupe, opacity: ramp(local, 0.6, 1.0) }}>{e.episode}</div>
       <div style={{ position: "absolute", top: 1400, left: 60, right: 60, textAlign: "center", fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, fontSize: 64, color: brand.ink, opacity: ramp(local, 0.75, 1.2), transform: `translateY(${(1 - ramp(local, 0.75, 1.2)) * 20}px)` }}>{e.question}</div>
     </AbsoluteFill>
   );

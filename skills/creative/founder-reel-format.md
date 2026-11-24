@@ -32,13 +32,13 @@ Length 12–22 s. Vertical 1080×1920, 30 fps, −14 LUFS.
 | **ID** | next 1–1.5 s | Founder name + role in the headroom, only once per episode. | `nameTitle` |
 | **Body** | 6–14 s | Talking head, framing change on every cut (wide / medium / close), slow push inside each shot. 1–3 inserts, each tied to a spoken word. | `shots`, `inserts`, `captions` |
 | **Proof line** | 2–3 s | The belief sentence ("really works", "my real skin") on her close-up, keyword styled. | captions `kw` |
-| **End card** | last 1.5 s | Arch wipe → brand logo, series + episode, one question that seeds the next episode. | `archWipe`, `endCard` |
+| **End card** | last 1.5 s | Arch/circle wipe → brand logo, series + episode, one question that seeds the next episode. Type must never touch the shape outline — if the series line is wider than the shape, drop the outline (`endCard.outline: false`). | `archWipe`, `endCard` |
 
 ### Insert library (pick by what she says)
 
 | She talks about… | Insert | Notes |
 |---|---|---|
-| a product | `product` — one or more cut-out PNGs standing in front of the brand's signature shape (`brand.shape`: circle or arch), contact shadows, slow float, ingredient chips copied from the label | always the client's real PNGs, never generated; keep real relative sizes (a 50 ml jar is ~2× the width of a dropper bottle) and keep every label readable — side by side beats overlapping |
+| a product | `product` — one or more cut-out PNGs standing in front of the brand's signature shape (`brand.shape`: circle or arch), contact shadows, slow float, ingredient chips copied from the label | always the client's real PNGs, never generated; take relative sizes from the brand's own group shot, not from memory (measure widths/heights there; e.g. a 50 ml jar ≈ 1.65× the width and ≈ 0.55× the height of a 30 ml dropper bottle incl. the dropper), same baseline, small even gap; keep every label readable — side by side beats overlapping |
 | an ingredient's origin (grape, oat, rose…) | `stock` — full-bleed free stock media of the source, slow zoom, white serif type, optional light logo | prefer **macro with condensation / water drops** on a dark or warm background; grade off-palette hues (e.g. green foliage or bokeh) toward the brand palette — or pick another shot; Pixabay/Pexels licence (commercial, no attribution); never AI-generated imagery |
 | a molecule / active (resveratrol…) | `molecule` — line drawing of the real structure that draws itself over a dark macro photo | only chemically correct structures |
 | texture / sensoriality | `texture` — procedural cream macro + serif words | abstract; never presented as product footage |
@@ -126,3 +126,4 @@ Origin story · Ingredient (one per episode) · Ritual / how she uses it · Myth
 - No freeze, no visible dissolve, no residual burned text.
 - Brand colours only; product shown is the real product; no retouched skin.
 - Music present on the end card; −14 LUFS; peak ≤ −1 dBFS.
+- Product group matches the brand's official shot (relative sizes, baseline); end-card type clear of any outline.
