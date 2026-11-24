@@ -109,6 +109,7 @@ Key capability families to look for in the output:
 | â†³ LTX Prompting | `creative/prompting/ltx-prompting.md` | LTX-2 6-element structure, audio prompting | `ltx2` |
 | â†³ HunyuanVideo Prompting | `creative/prompting/hunyuan-prompting.md` | HunyuanVideo formula, I2V best practices | â€" |
 | Commercial Product Video | `creative/commercial-product-video.md` | Physical-product ads: SKU references, shot roles, generation controls, continuity, and final-cut fidelity | — |
+| Founder Reel Format | `creative/founder-reel-format.md` | Repeatable series format for founder-led beauty/wellness reels: beat grammar, insert library, footage prep recipe (burned-text removal, honest glow-up, studio relight, mild upscale), filming brief; template at `templates/founder-reel/` | `remotion-best-practices` |
 | Storytelling | `creative/storytelling.md` | Narrative structure, hooks, pacing, Mayer's principles | â€" |
 | Sound Design | `creative/sound-design.md` | Audio ducking, LUFS targets, SFX timing, AI TTS mixing | `elevenlabs` |
 | Typography | `creative/typography.md` | Font selection, text sizing, safe zones, caption styling | â€" |
