@@ -96,6 +96,16 @@ class BgRemove(BaseTool):
         except ImportError:
             return ToolStatus.UNAVAILABLE
 
+    # One ONNX session per model, reused across calls: loading u2net takes
+    # longer than inferring a frame, which made per-frame video mattes slow.
+    _sessions: dict[str, Any] = {}
+
+    @classmethod
+    def _session(cls, rembg: Any, model_name: str) -> Any:
+        if model_name not in cls._sessions:
+            cls._sessions[model_name] = rembg.new_session(model_name)
+        return cls._sessions[model_name]
+
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         input_path = Path(inputs["input_path"])
         if not input_path.exists():
@@ -130,7 +140,7 @@ class BgRemove(BaseTool):
 
         result_image = rembg.remove(
             input_image,
-            session=rembg.new_session(model_name),
+            session=self._session(rembg, model_name),
             alpha_matting=alpha_matting,
         )
 
