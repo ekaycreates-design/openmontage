@@ -58,7 +58,8 @@ type Shot = { id: string; start: number; end: number; z0: number; z1: number; sx
 type CapWord = { text: string; start: number; kw: boolean };
 type Page = { start: number; end: number; words: CapWord[] };
 type Line = { text: string; at: number; style: "kicker" | "hero" | "second"; icon?: "drop" | "leaf" };
-type Chip = { at: number; side: "left" | "right"; title: string; sub: string };
+type Chip = { at: number; side: "left" | "right"; title: string; sub: string; x?: number; y?: number };
+type Shape = "arch" | "circle";
 
 export type Brand = {
   ink: string; // dark text
@@ -71,11 +72,15 @@ export type Brand = {
   archFill: [string, string, string]; // product-card arch gradient
   logo?: string; // public path, transparent PNG (brand colour)
   logoLight?: string; // public path, white logo for dark media
+  shape?: Shape; // signature frame used by product card, end card and wipe (default "arch")
 };
 
+type ProductItem = { image: string; imageSize: [number, number]; height: number; cx: number; bottom: number; delay?: number };
 type ProductInsert = {
-  type: "product"; start: number; end: number; image: string; imageSize: [number, number];
-  iconY?: number; lines: Line[]; chips: Chip[];
+  type: "product"; start: number; end: number;
+  image?: string; imageSize?: [number, number]; iconY?: number; // single product (legacy)
+  products?: ProductItem[]; // several products, drawn back to front
+  backdrop?: Shape; circle?: { d: number; cx?: number; cy: number }; textTop?: number; lines: Line[]; chips: Chip[];
 };
 type StockInsert = {
   type: "stock"; start: number; end: number; media: "video" | "image"; src: string; startFrom?: number;
@@ -313,38 +318,71 @@ const TypeLine: React.FC<{ line: Line; t: number; ink: string; accent: string; s
 const ARCH_W = 640;
 const ARCH_H = 900;
 const PRODUCT_H = 1040;
+const CIRCLE_D = 780;
+const CIRCLE_CY = 770;
 
 const ProductCard: React.FC<{ ins: ProductInsert; brand: Brand; t: number }> = ({ ins, brand, t }) => {
   const enter = ramp(t, ins.start, ins.start + 0.42, easeInOut);
   const local = t - ins.start;
   const dur = ins.end - ins.start;
-  const prodW = Math.round((ins.imageSize[0] * PRODUCT_H) / ins.imageSize[1]);
-  const bottleIn = ramp(t, ins.start + 0.1, ins.start + 0.9, easeOut);
-  const float = Math.sin(local * 1.7) * 5;
+  const shape: Shape = ins.backdrop ?? brand.shape ?? "arch";
+  const cd = ins.circle?.d ?? CIRCLE_D;
+  const ccx = ins.circle?.cx ?? W / 2;
+  const ccy = ins.circle?.cy ?? CIRCLE_CY;
   const push = 1 + 0.035 * Math.min(1, Math.max(0, local / dur));
   const outline = ramp(t, ins.start + 0.25, ins.start + 1.2, easeInOut);
   const archTop = 300;
-  const bottom = archTop + ARCH_H + 36;
-  const top = bottom - PRODUCT_H;
-  const chipY = top + ((ins.iconY ?? ins.imageSize[1] * 0.87) * PRODUCT_H) / ins.imageSize[1];
+  // products: explicit list, or the legacy single image centred in the frame
+  const items: ProductItem[] = ins.products ?? (ins.image && ins.imageSize
+    ? [{ image: ins.image, imageSize: ins.imageSize, height: PRODUCT_H, cx: W / 2, bottom: archTop + ARCH_H + 36 }]
+    : []);
+  const first = items[0];
+  const firstW = first ? (first.imageSize[0] * first.height) / first.imageSize[1] : 0;
+  const defaultChipY = first ? first.bottom - first.height + ((ins.iconY ?? first.imageSize[1] * 0.87) * first.height) / first.imageSize[1] : 900;
+  const fill = `radial-gradient(70% 55% at 45% 32%, ${brand.archFill[0]} 0%, ${brand.archFill[1]} 68%, ${brand.archFill[2]} 100%)`;
+  const shadow = "inset 0 -30px 60px rgba(120,110,80,0.10), 0 30px 70px rgba(90,70,50,0.12)";
+  const backdropBottom = shape === "circle" ? ccy + cd / 2 : archTop + ARCH_H;
+  const r = cd / 2 + 24;
+  const circ = 2 * Math.PI * r;
   const L = 2 * ARCH_H + Math.PI * (ARCH_W / 2 + 22);
   return (
     <AbsoluteFill style={{ transform: `translateY(${(1 - enter) * 100}%)` }}>
       <AbsoluteFill style={{ background: `linear-gradient(180deg, ${brand.cream} 0%, ${brand.creamDeep} 100%)` }} />
       <AbsoluteFill style={{ transform: `scale(${push})`, transformOrigin: "50% 55%" }}>
-        <div style={{ position: "absolute", left: (W - ARCH_W) / 2, top: archTop, width: ARCH_W, height: ARCH_H, borderRadius: `${ARCH_W / 2}px ${ARCH_W / 2}px 4px 4px`, background: `radial-gradient(70% 45% at 45% 30%, ${brand.archFill[0]} 0%, ${brand.archFill[1]} 68%, ${brand.archFill[2]} 100%)`, boxShadow: "inset 0 -30px 60px rgba(120,110,80,0.10), 0 30px 70px rgba(90,70,50,0.12)", transform: `scale(${0.95 + 0.05 * enter})` }} />
-        <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
-          <path d={`M ${(W - ARCH_W) / 2 - 22} ${archTop + ARCH_H + 22} L ${(W - ARCH_W) / 2 - 22} ${archTop + ARCH_W / 2} A ${ARCH_W / 2 + 22} ${ARCH_W / 2 + 22} 0 0 1 ${(W + ARCH_W) / 2 + 22} ${archTop + ARCH_W / 2} L ${(W + ARCH_W) / 2 + 22} ${archTop + ARCH_H + 22}`} fill="none" stroke={brand.hairline} strokeWidth={1.6} strokeDasharray={L} strokeDashoffset={L * (1 - outline)} opacity={0.85} />
-        </svg>
-        <div style={{ position: "absolute", left: W / 2 - 200, top: bottom - 26, width: 400, height: 46, borderRadius: "50%", background: "radial-gradient(closest-side, rgba(70,48,36,0.32), rgba(70,48,36,0))", opacity: bottleIn }} />
-        <Img src={staticFile(ins.image)} style={{ position: "absolute", left: W / 2 - prodW / 2, top, width: prodW, height: PRODUCT_H, opacity: bottleIn, transform: `translateY(${(1 - bottleIn) * 60 + float}px)`, filter: "drop-shadow(0 26px 34px rgba(70,50,40,0.16))" }} />
+        {shape === "circle" ? (
+          <>
+            <div style={{ position: "absolute", left: ccx - cd / 2, top: ccy - cd / 2, width: cd, height: cd, borderRadius: "50%", background: fill, boxShadow: shadow, transform: `scale(${0.92 + 0.08 * enter})` }} />
+            <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+              <circle cx={ccx} cy={ccy} r={r} fill="none" stroke={brand.hairline} strokeWidth={1.6} strokeDasharray={circ} strokeDashoffset={circ * (1 - outline)} transform={`rotate(-90 ${ccx} ${ccy})`} opacity={0.85} />
+            </svg>
+          </>
+        ) : (
+          <>
+            <div style={{ position: "absolute", left: (W - ARCH_W) / 2, top: archTop, width: ARCH_W, height: ARCH_H, borderRadius: `${ARCH_W / 2}px ${ARCH_W / 2}px 4px 4px`, background: fill, boxShadow: shadow, transform: `scale(${0.95 + 0.05 * enter})` }} />
+            <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
+              <path d={`M ${(W - ARCH_W) / 2 - 22} ${archTop + ARCH_H + 22} L ${(W - ARCH_W) / 2 - 22} ${archTop + ARCH_W / 2} A ${ARCH_W / 2 + 22} ${ARCH_W / 2 + 22} 0 0 1 ${(W + ARCH_W) / 2 + 22} ${archTop + ARCH_W / 2} L ${(W + ARCH_W) / 2 + 22} ${archTop + ARCH_H + 22}`} fill="none" stroke={brand.hairline} strokeWidth={1.6} strokeDasharray={L} strokeDashoffset={L * (1 - outline)} opacity={0.85} />
+            </svg>
+          </>
+        )}
+        {items.map((it, i) => {
+          const w = (it.imageSize[0] * it.height) / it.imageSize[1];
+          const k = ramp(t, ins.start + 0.1 + (it.delay ?? i * 0.12), ins.start + 0.9 + (it.delay ?? i * 0.12), easeOut);
+          const float = Math.sin(local * 1.7 + i * 1.3) * 5;
+          return (
+            <React.Fragment key={i}>
+              <div style={{ position: "absolute", left: it.cx - w * 0.47, top: it.bottom - 26, width: w * 0.94, height: 46, borderRadius: "50%", background: "radial-gradient(closest-side, rgba(70,48,36,0.32), rgba(70,48,36,0))", opacity: k }} />
+              <Img src={staticFile(it.image)} style={{ position: "absolute", left: it.cx - w / 2, top: it.bottom - it.height, width: w, height: it.height, opacity: k, transform: `translateY(${(1 - k) * 60 + float}px)`, filter: "drop-shadow(0 26px 34px rgba(70,50,40,0.16))" }} />
+            </React.Fragment>
+          );
+        })}
         {ins.chips.map((c, i) => {
           const k = ramp(t, c.at, c.at + 0.5);
           if (k <= 0.001) return null;
           const left = c.side === "left";
-          const edge = left ? W / 2 - prodW / 2 - 26 : W / 2 + prodW / 2 + 26;
+          const edge = c.x ?? (left ? (first?.cx ?? W / 2) - firstW / 2 - 26 : (first?.cx ?? W / 2) + firstW / 2 + 26);
+          const top = (c.y ?? defaultChipY) - 34;
           return (
-            <div key={i} style={{ position: "absolute", top: chipY - 34, ...(left ? { right: W - edge } : { left: edge }), textAlign: left ? "right" : "left", opacity: k, transform: `translateX(${(1 - k) * (left ? -24 : 24)}px)` }}>
+            <div key={i} style={{ position: "absolute", top, ...(left ? { right: W - edge } : { left: edge }), textAlign: left ? "right" : "left", opacity: k, transform: `translateX(${(1 - k) * (left ? -24 : 24)}px)` }}>
               <div style={{ fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, fontSize: 38, color: brand.ink, lineHeight: 1.05, whiteSpace: "nowrap" }}>{c.title}</div>
               <div style={{ display: "flex", justifyContent: left ? "flex-end" : "flex-start", alignItems: "center", gap: 10, marginTop: 8 }}>
                 {!left && <div style={{ width: 8, height: 8, borderRadius: 4, background: brand.accent }} />}
@@ -355,7 +393,7 @@ const ProductCard: React.FC<{ ins: ProductInsert; brand: Brand; t: number }> = (
           );
         })}
       </AbsoluteFill>
-      <div style={{ position: "absolute", top: archTop + ARCH_H + 92, left: 0, right: 0 }}>
+      <div style={{ position: "absolute", top: ins.textTop ?? backdropBottom + 92, left: 0, right: 0 }}>
         {ins.lines.map((l, i) => (
           <TypeLine key={i} line={l} t={t} ink={brand.ink} accent={brand.accent} sizes={{ kicker: 30, hero: 112, second: 80 }} />
         ))}
@@ -533,6 +571,12 @@ const LightLeak: React.FC<{ at: number; dur: number; seed: number; t: number }> 
 const ArchWipe: React.FC<{ w: FounderReelProps["archWipe"]; brand: Brand; t: number }> = ({ w, brand, t }) => {
   const p = ramp(t, w.start, w.start + w.dur, easeInOut);
   if (p <= 0) return null;
+  if ((brand.shape ?? "arch") === "circle") {
+    // a disc rising from below the frame — covers the speaker's face last
+    const d = interpolate(p, [0, 1], [500, 4700]);
+    const cy = H * 1.08;
+    return <div style={{ position: "absolute", left: W / 2 - d / 2, top: cy - d / 2, width: d, height: d, borderRadius: "50%", background: brand.cream }} />;
+  }
   const width = interpolate(p, [0, 1], [120, 2200]);
   const height = interpolate(p, [0, 1], [0, 3200]);
   return <div style={{ position: "absolute", left: (W - width) / 2, bottom: 0, width, height, background: brand.cream, borderRadius: `${width / 2}px ${width / 2}px 0 0` }} />;
@@ -551,7 +595,11 @@ const EndCard: React.FC<{ e: FounderReelProps["endCard"]; brand: Brand; t: numbe
     <AbsoluteFill style={{ background: `radial-gradient(90% 60% at 50% 40%, #FAF6F0 0%, ${brand.cream} 55%, ${brand.creamDeep} 100%)` }}>
       <AbsoluteFill style={{ background: `radial-gradient(40% 25% at 50% 47%, rgba(223,227,197,${0.22 + 0.06 * glow}), rgba(223,227,197,0) 70%)` }} />
       <svg width={W} height={H} style={{ position: "absolute", left: 0, top: 0 }}>
-        <path d={`M ${(W - AW) / 2} ${top + AH} L ${(W - AW) / 2} ${top + AW / 2} A ${AW / 2} ${AW / 2} 0 0 1 ${(W + AW) / 2} ${top + AW / 2} L ${(W + AW) / 2} ${top + AH}`} fill="none" stroke={brand.hairline} strokeWidth={1.6} strokeDasharray={L} strokeDashoffset={L * (1 - outline)} />
+        {(brand.shape ?? "arch") === "circle" ? (
+          <circle cx={W / 2} cy={965} r={340} fill="none" stroke={brand.hairline} strokeWidth={1.6} strokeDasharray={2 * Math.PI * 340} strokeDashoffset={2 * Math.PI * 340 * (1 - outline)} transform={`rotate(-90 ${W / 2} 965)`} />
+        ) : (
+          <path d={`M ${(W - AW) / 2} ${top + AH} L ${(W - AW) / 2} ${top + AW / 2} A ${AW / 2} ${AW / 2} 0 0 1 ${(W + AW) / 2} ${top + AW / 2} L ${(W + AW) / 2} ${top + AH}`} fill="none" stroke={brand.hairline} strokeWidth={1.6} strokeDasharray={L} strokeDashoffset={L * (1 - outline)} />
+        )}
       </svg>
       {logo ? (
         <div style={{ position: "absolute", top: 850, left: 0, right: 0, display: "flex", justifyContent: "center", opacity: logoK, transform: `translateY(${(1 - logoK) * 30}px)`, filter: `blur(${(1 - logoK) * 6}px)` }}>

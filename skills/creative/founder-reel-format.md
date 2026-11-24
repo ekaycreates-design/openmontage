@@ -38,7 +38,7 @@ Length 12–22 s. Vertical 1080×1920, 30 fps, −14 LUFS.
 
 | She talks about… | Insert | Notes |
 |---|---|---|
-| a product | `product` — cut-out PNG standing in front of an arch, contact shadow, slow float, ingredient chips copied from the label | always the client's real PNG, never a generated product |
+| a product | `product` — one or more cut-out PNGs standing in front of the brand's signature shape (`brand.shape`: circle or arch), contact shadows, slow float, ingredient chips copied from the label | always the client's real PNGs, never generated; keep real relative sizes (a 50 ml jar is ~2× the width of a dropper bottle) and keep every label readable — side by side beats overlapping |
 | an ingredient's origin (grape, oat, rose…) | `stock` — full-bleed free stock media of the source, slow zoom, white serif type, optional light logo | prefer **macro with condensation / water drops** on a dark or warm background; grade off-palette hues (e.g. green foliage or bokeh) toward the brand palette — or pick another shot; Pixabay/Pexels licence (commercial, no attribution); never AI-generated imagery |
 | a molecule / active (resveratrol…) | `molecule` — line drawing of the real structure that draws itself over a dark macro photo | only chemically correct structures |
 | texture / sensoriality | `texture` — procedural cream macro + serif words | abstract; never presented as product footage |

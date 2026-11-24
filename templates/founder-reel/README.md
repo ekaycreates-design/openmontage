@@ -60,7 +60,7 @@ end card) and mux / encode with `video_compose`.
   "brand": { "ink": "#1F2420", "cream": "#F3ECE4", "creamDeep": "#E8DED3",
              "accent": "#<brand colour>", "accentSoft": "#<pale brand tint>", "taupe": "#6E6157",
              "hairline": "#B49A5A", "archFill": ["#FAF4EC", "#EADCCD", "#DDCAB7"],
-             "logo": "logo.png", "logoLight": "logo_white.png" },
+             "logo": "logo.png", "logoLight": "logo_white.png", "shape": "circle" /* or "arch" */ },
   "baseVideo": "base.mp4", "baseEndSeconds": 12.43, "face": { "fx": 0.55, "fy": 0.485 },
   "shots": [{ "id": "SH1", "start": 0, "end": 1.0, "z0": 1.18, "z1": 1.24, "sx": 0.5, "sy": 0.58 }],
   "transitions": [{ "start": 0.86, "end": 1.2 }],
@@ -76,8 +76,10 @@ end card) and mux / encode with `video_compose`.
       "lines": [{ "text": "extracto de", "at": 1.95, "style": "kicker" }], "logoAt": 3.0 },
     { "type": "molecule", "molecule": "resveratrol", "start": 4.2, "end": 5.9, "bg": "splash.jpg",
       "lines": [{ "text": "resveratrol", "at": 4.4, "style": "hero" }] },
-    { "type": "product", "start": 8.2, "end": 10.2, "image": "serum.png", "imageSize": [571, 1400],
-      "iconY": 1213, "lines": [], "chips": [] }
+    { "type": "product", "start": 8.2, "end": 10.2, "circle": { "d": 820, "cx": 560, "cy": 790 },
+      "products": [ { "image": "serum.png", "imageSize": [571, 1400], "height": 720, "cx": 195, "bottom": 1170 },
+                    { "image": "jar.png", "imageSize": [1038, 900], "height": 580, "cx": 696, "bottom": 1195, "delay": 0.18 } ],
+      "lines": [], "chips": [ { "at": 9.0, "side": "right", "title": "…", "sub": "…", "x": 392, "y": 470 } ] }
   ],
   "archWipe": { "start": 12.2, "dur": 0.42 },
   "endCard": { "start": 12.55, "episode": "SERIES · EPISODE 3", "question": "…?" }
